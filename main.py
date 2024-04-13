@@ -124,17 +124,22 @@ def updates():
                                         choices=["0", "1"], default="0"))
     if update_want_to == 0:
         new_update = add_updates()
-        response = requests.get(
-            f"https://api.{config.SETTINGS['api_url']}/api/v3/comic/{new_update[0]}/group/{new_update[1]}"
-            f"/chapters?limit=500&offset=0&platform=3",
-            headers=config.API_HEADER, proxies=config.PROXIES)
-        # 记录API访问量
-        api_restriction()
-        try:
-            response.raise_for_status()
-        except Exception as e:
-            time.sleep(5)
-            response.raise_for_status()
+        for _ in range(3):
+            try:
+                response = requests.get(
+                    f"https://api.{config.SETTINGS['api_url']}/api/v3/comic/{new_update[0]}/group/{new_update[1]}"
+                    f"/chapters?limit=500&offset=0&platform=3",
+                    headers=config.API_HEADER, proxies=config.PROXIES)
+                # 记录API访问量
+                api_restriction()
+                response.raise_for_status()
+                break
+            except Exception as e:
+                if r >= 2:
+                    response.raise_for_status()
+                time.sleep(5)
+                print(
+                    f"[bold red]无法获取{manga_chapter_info['uuid']}，ErrMsg:{e}，即将重试。[/]")
         manga_chapter_json = response.json()
         manga_now = int(
             Prompt.ask(f"当前漫画有{manga_chapter_json['results']['total']}话的内容，请问您目前看到多少话了"))
@@ -258,17 +263,22 @@ def update_download():
 
 def update_get_chapter(manga_path_word, manga_group_path_word, now_chapter):
     # 因为将偏移设置到最后下载的章节，所以可以直接下载全本
-    response = requests.get(
-        f"https://api.{config.SETTINGS['api_url']}/api/v3/comic/{manga_path_word}/group/{manga_group_path_word}"
-        f"/chapters?limit=500&offset={now_chapter}&platform=3",
-        headers=config.API_HEADER, proxies=config.PROXIES)
-    # 记录API访问量
-    api_restriction()
-    try:
-        response.raise_for_status()
-    except Exception as e:
-        time.sleep(5)
-        response.raise_for_status()
+    for _ in range(3):
+        try:
+            response = requests.get(
+                f"https://api.{config.SETTINGS['api_url']}/api/v3/comic/{manga_path_word}/group/{manga_group_path_word}"
+                f"/chapters?limit=500&offset={now_chapter}&platform=3",
+                headers=config.API_HEADER, proxies=config.PROXIES)
+            # 记录API访问量
+            api_restriction()
+            response.raise_for_status()
+            break
+        except Exception as e:
+            if r >= 2:
+                response.raise_for_status()
+            time.sleep(5)
+            print(
+                f"[bold red]无法获取{manga_chapter_info['uuid']}，ErrMsg:{e}，即将重试。[/]")
     manga_chapter_json = response.json()
     # Todo 创建传输的json,并且之后会将此json保存为temp.json修复这个问题https://github.com/misaka10843/copymanga-downloader/issues/35
     return_json = {
@@ -451,15 +461,20 @@ def collect_expect():
 # 漫画详细相关
 
 def manga_group(manga_path_word):
-    response = requests.get(f"https://api.{config.SETTINGS['api_url']}/api/v3/comic2/{manga_path_word}",
-                            headers=config.API_HEADER, proxies=config.PROXIES)
-    # 记录API访问量
-    api_restriction()
-    try:
-        response.raise_for_status()
-    except Exception as e:
-        time.sleep(5)
-        response.raise_for_status()
+    for r in range(3):
+        try:
+            response = requests.get(f"https://api.{config.SETTINGS['api_url']}/api/v3/comic2/{manga_path_word}",
+                                    headers=config.API_HEADER, proxies=config.PROXIES)
+            # 记录API访问量
+            api_restriction()
+            response.raise_for_status()
+            break
+        except Exception as e:
+            if r >= 2:
+                response.raise_for_status()
+            time.sleep(5)
+            print(
+                f"[bold red]无法获取{manga_path_word}漫画组，ErrMsg:{e}，即将重试。[/]")
     manga_group_json = response.json()
     # 判断是否只有默认组
     if len(manga_group_json["results"]["groups"]) == 1:
@@ -476,17 +491,22 @@ def manga_group(manga_path_word):
 
 
 def manga_chapter(manga_path_word, group_path_word):
-    response = requests.get(
-        f"https://api.{config.SETTINGS['api_url']}/api/v3/comic/{manga_path_word}/group/{group_path_word}"
-        f"/chapters?limit=500&offset=0&platform=3",
-        headers=config.API_HEADER, proxies=config.PROXIES)
-    # 记录API访问量
-    api_restriction()
-    try:
-        response.raise_for_status()
-    except Exception as e:
-        time.sleep(5)
-        response.raise_for_status()
+    for _ in range(3):
+        try:
+            response = requests.get(
+                f"https://api.{config.SETTINGS['api_url']}/api/v3/comic/{manga_path_word}/group/{group_path_word}"
+                f"/chapters?limit=500&offset=0&platform=3",
+                headers=config.API_HEADER, proxies=config.PROXIES)
+            # 记录API访问量
+            api_restriction()
+            response.raise_for_status()
+            break
+        except Exception as e:
+            if r >= 2:
+                response.raise_for_status()
+            time.sleep(5)
+            print(
+                f"[bold red]无法获取{manga_path_word} : {group_path_word}漫画章节，ErrMsg:{e}，即将重试。[/]")
 
     manga_chapter_json = response.json()
     # Todo 创建传输的json,并且之后会将此json保存为temp.json修复这个问题https://github.com/misaka10843/copymanga-downloader/issues/35
@@ -540,17 +560,22 @@ def chapter_allocation(manga_chapter_json):
                              manga_chapter_json['start']:manga_chapter_json['end']]
     # 准备分配章节下载
     for manga_chapter_info in manga_chapter_list:
-        response = requests.get(
-            f"https://api.{config.SETTINGS['api_url']}/api/v3/comic/{manga_chapter_info['comic_path_word']}"
-            f"/chapter2/{manga_chapter_info['uuid']}?platform=3",
-            headers=config.API_HEADER, proxies=config.PROXIES)
-        # 记录API访问量
-        api_restriction()
-        try:
-            response.raise_for_status()
-        except Exception as e:
-            time.sleep(5)
-            response.raise_for_status()
+        for _ in range(3):
+            try:
+                response = requests.get(
+                    f"https://api.{config.SETTINGS['api_url']}/api/v3/comic/{manga_chapter_info['comic_path_word']}"
+                    f"/chapter2/{manga_chapter_info['uuid']}?platform=3",
+                    headers=config.API_HEADER, proxies=config.PROXIES)
+                # 记录API访问量
+                api_restriction()
+                response.raise_for_status()
+                break
+            except Exception as e:
+                if r >= 2:
+                    response.raise_for_status()
+                time.sleep(5)
+                print(
+                    f"[bold red]无法获取{manga_chapter_info['uuid']}，ErrMsg:{e}，即将重试。[/]")
         manga_chapter_info_json = response.json()
 
         img_url_contents = manga_chapter_info_json['results']['chapter']['contents']
